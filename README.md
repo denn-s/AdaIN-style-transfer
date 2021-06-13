@@ -1,6 +1,6 @@
 # AdaIN-style-transfer
 
-## setup 
+## Setup 
 
 ```bash
 sudo apt-get install python3-dev
@@ -26,7 +26,7 @@ pip install torch==1.7.0+cpu torchvision==0.8.1+cpu -f https://download.pytorch.
 pip install -r requirements.txt 
 ```
 
-## train
+## Train
 
 _GTX1060_
 
@@ -45,7 +45,7 @@ python -m tools.train \
 --save-n-epochs 1
 ```
 
-## test
+## Test
 
 ```bash
 python -m tools.test \
@@ -54,3 +54,8 @@ python -m tools.test \
 --output-file-path data/output/cat_great_wave.jpg \
 --model-file-path data/models/adain.pt
 ```
+
+## References
+
+1. [Huang, Xun, and Serge Belongie. "Arbitrary style transfer in real-time with adaptive instance normalization." Proceedings of the IEEE International Conference on Computer Vision. 2017.](https://openaccess.thecvf.com/content_ICCV_2017/papers/Huang_Arbitrary_Style_Transfer_ICCV_2017_paper.pdf)
+2. [Official Torch based implementation](https://github.com/xunhuang1995/AdaIN-style)
