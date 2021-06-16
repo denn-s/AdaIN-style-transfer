@@ -57,13 +57,16 @@ def calc_style_loss(style_target, style_output):
     return sum_mean + sum_std
 
 
-def train(args: argparse.Namespace):
-    print('using output_dir_path: {}'.format(args.output_dir_path))
-    if not os.path.exists(args.output_dir_path):
-        os.makedirs(args.output_dir_path)
+def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_path: str, encoder_model_file_path: str,
+          decoder_model_file_path: str, batch_size: int, num_workers: int, num_epochs: int,
+          learning_rate: float, lr_scheduler_gamma: float, style_weight: float, log_n_iter: int, image_n_iter: int,
+          save_n_epochs: int):
+    print('using output_dir_path: {}'.format(output_dir_path))
+    if not os.path.exists(output_dir_path):
+        os.makedirs(output_dir_path)
 
     dt_str = datetime.datetime.now().strftime("%Y.%m.%d_%H-%M-%S")
-    checkpoint_dir_path = os.path.join(args.output_dir_path, 'train_' + dt_str)
+    checkpoint_dir_path = os.path.join(output_dir_path, 'train_' + dt_str)
     print('using checkpoint_dir_path: {}'.format(checkpoint_dir_path))
     if not os.path.exists(checkpoint_dir_path):
         os.makedirs(checkpoint_dir_path)
@@ -73,21 +76,21 @@ def train(args: argparse.Namespace):
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print('using device: {}'.format(device))
 
-    print('using content_images_dir_path: {}'.format(args.content_images_dir_path))
-    if not os.path.isdir(args.content_images_dir_path):
-        print('error: not a directroy: {}'.format(args.content_images_dir_path))
+    print('using content_images_dir_path: {}'.format(content_images_dir_path))
+    if not os.path.isdir(content_images_dir_path):
+        print('error: not a directroy: {}'.format(content_images_dir_path))
 
-    print('using style_images_dir_path: {}'.format(args.style_images_dir_path))
-    if not os.path.isdir(args.style_images_dir_path):
-        print('error: not a directroy: {}'.format(args.style_images_dir_path))
+    print('using style_images_dir_path: {}'.format(style_images_dir_path))
+    if not os.path.isdir(style_images_dir_path):
+        print('error: not a directroy: {}'.format(style_images_dir_path))
 
-    print('using encoder_model_file_path: {}'.format(args.encoder_model_file_path))
+    print('using encoder_model_file_path: {}'.format(encoder_model_file_path))
     encoder = Encoder()
-    encoder.features.load_state_dict(torch.load(args.encoder_model_file_path))
+    encoder.features.load_state_dict(torch.load(encoder_model_file_path))
 
     decoder = Decoder()
-    if args.decoder_model_file_path is not None:
-        decoder.load_state_dict(torch.load(args.decoder_model_file_path))
+    if decoder_model_file_path is not None:
+        decoder.load_state_dict(torch.load(decoder_model_file_path))
 
     encoder_num_layers = 30
     model = EncoderDecoderNet(encoder, encoder_num_layers, decoder)
@@ -102,18 +105,17 @@ def train(args: argparse.Namespace):
         T.ToTensor()
     ])
 
-    content_loader = DataLoader(ImageDataset(args.content_images_dir_path, transform=transforms),
-                                batch_size=args.batch_size,
-                                shuffle=True, num_workers=args.num_workers)
+    content_loader = DataLoader(ImageDataset(content_images_dir_path, transform=transforms),
+                                batch_size=batch_size,
+                                shuffle=True, num_workers=num_workers)
     print('content_loader len: {}'.format(len(content_loader)))
 
-    style_loader = DataLoader(ImageDataset(args.style_images_dir_path, transform=transforms),
-                              batch_size=args.batch_size,
-                              shuffle=True, num_workers=args.num_workers)
+    style_loader = DataLoader(ImageDataset(style_images_dir_path, transform=transforms),
+                              batch_size=batch_size,
+                              shuffle=True, num_workers=num_workers)
     print('style_loader len: {}'.format(len(style_loader)))
 
-    lr_scheduler_gamma = 0.1
-    optimizer = torch.optim.Adam(model.decoder.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.Adam(model.decoder.parameters(), lr=learning_rate)
 
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, lr_scheduler_gamma)
 
@@ -126,6 +128,7 @@ def train(args: argparse.Namespace):
         def hook(model: torch.nn.Module, input: torch.Tensor, output: torch.Tensor):
             encoder_activations[str(layer_num)] = output.clone().detach()
             # print('activation_hook -> layer_num: {}'.format(layer_num))
+
         return hook
 
     # vgg19 relu1_1, relu2_1, relu3_1, relu4_1
@@ -134,7 +137,7 @@ def train(args: argparse.Namespace):
     for layer_pos in enc_style_layers:
         model.encoder[layer_pos].register_forward_hook(get_activation(layer_pos))
 
-    digits_epoch = int(math.log10(args.num_epochs)) + 1
+    digits_epoch = int(math.log10(num_epochs)) + 1
     digits_iter = int(math.log10(max_iterations)) + 1
     print_str = 'epoch: [{:>' + str(digits_epoch) + '}|{}], iter: [{:>' + str(
         digits_iter) + '}|{}] -> content loss: {:>10.5f}, style loss: {:>10.5f}, total loss: {:>10.5f}'
@@ -145,7 +148,7 @@ def train(args: argparse.Namespace):
 
     encoder_activations = {}
 
-    for epoch in range(args.num_epochs):
+    for epoch in range(num_epochs):
 
         content_iter = iter(content_loader)
         style_iter = iter(style_loader)
@@ -174,12 +177,12 @@ def train(args: argparse.Namespace):
             encoder_activations = {}
 
             content_loss = calc_content_loss(target_fm, output_fm)
-            style_loss = args.style_weight * calc_style_loss(target_activations, output_activations)
+            style_loss = style_weight * calc_style_loss(target_activations, output_activations)
             loss = content_loss + style_loss
 
-            if i % args.log_n_iter == 0:
+            if i % log_n_iter == 0:
                 print(
-                    print_str.format(epoch + 1, args.num_epochs, i + 1, max_iterations, content_loss, style_loss, loss))
+                    print_str.format(epoch + 1, num_epochs, i + 1, max_iterations, content_loss, style_loss, loss))
 
                 global_step = (epoch * max_iterations) + i
 
@@ -191,9 +194,9 @@ def train(args: argparse.Namespace):
                 for name, weight in model.decoder.named_parameters():
                     writer.add_histogram(name, weight, global_step)
 
-            if i % args.image_n_iter == 0:
+            if i % image_n_iter == 0:
                 images_grid = torchvision.utils.make_grid(torch.cat((content_batch, style_batch, output_image), 0),
-                                                          args.batch_size)
+                                                          batch_size)
                 writer.add_image('images', images_grid, global_step)
 
             optimizer.zero_grad()
@@ -202,9 +205,9 @@ def train(args: argparse.Namespace):
 
         scheduler.step()
 
-        if epoch % args.save_n_epochs == 0 or epoch == args.num_epochs - 1:
-            model_file_path = os.path.join(checkpoint_dir_path, 'epoch_' + str(epoch) + '.pt')
-            torch.save(model.state_dict(), model_file_path)
+        if epoch % save_n_epochs == 0 or epoch == num_epochs - 1:
+            model_file_path = os.path.join(checkpoint_dir_path, 'epoch_' + str(epoch) + '_decoder.pt')
+            torch.save(model.decoder.state_dict(), model_file_path)
 
     writer.close()
 
@@ -215,12 +218,13 @@ def main():
     parser.add_argument('--content-images-dir-path', type=str, required=True)
     parser.add_argument('--style-images-dir-path', type=str, required=True)
     parser.add_argument('--output-dir-path', type=str, required=True)
-    parser.add_argument('--encoder-model-file_path', type=str, required=True)
+    parser.add_argument('--encoder-model-file-path', type=str, required=True)
     parser.add_argument('--decoder-model-file-path', type=str, default=None)
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--num-workers', type=int, default=2)
     parser.add_argument('--num-epochs', type=int, default=10)
     parser.add_argument('--learning-rate', type=float, default=0.0001)
+    parser.add_argument('--lr-scheduler-gamma', type=float, default=0.1)
     parser.add_argument('--style-weight', type=float, default=10.0)
     parser.add_argument('--log-n-iter', type=int, default=100)
     parser.add_argument('--image-n-iter', type=int, default=500)
@@ -231,11 +235,14 @@ def main():
     # set random seed for reproducibility
     manual_seed = 42
 
-    print("random seed: ", manual_seed)
+    print('random seed: ', manual_seed)
     random.seed(manual_seed)
     torch.manual_seed(manual_seed)
 
-    train(args)
+    train(args.content_images_dir_path, args.style_images_dir_path, args.output_dir_path, args.encoder_model_file_path,
+          args.decoder_model_file_path, args.batch_size, args.num_workers, args.num_epochs,
+          args.learning_rate, args.lr_scheduler_gamma,
+          args.style_weight, args.log_n_iter, args.image_n_iter, args.save_n_epochs)
 
 
 if __name__ == '__main__':
