@@ -49,10 +49,11 @@ python -m tools.train \
 
 ```bash
 python -m tools.test \
---content-image-file-path  data/images/content/cat.jpg \
+--content-image-file-path  data/images/content/cica.jpg \
 --style-image-file-path  data/images/style/great_wave.jpg \
 --output-file-path data/output/cat_great_wave.jpg \
---model-file-path data/models/adain.pt
+--encoder-model-file-path data/models/vgg19.pt \
+--decoder-model-file-path data/checkpoints/train_2021.06.12_19-14-41/epoch_15_decoder.pt
 ```
 
 ## References

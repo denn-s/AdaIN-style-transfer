@@ -8,11 +8,14 @@ import torchvision.transforms as T
 from lib.models.encoder_decoder_net import EncoderDecoderNet
 from lib.utils import load_image
 
+from lib.models.encoder import Encoder
+from lib.models.decoder import Decoder
+from lib.models.encoder_decoder_net import EncoderDecoderNet
+
 
 def test(args: argparse.Namespace):
     print('using content_image_file_path: {}'.format(args.content_image_file_path))
     print('using style_image_file_path: {}'.format(args.style_image_file_path))
-    print('using model_file_path: {}'.format(args.model_file_path))
 
     print('using output_file_path: {}'.format(args.output_file_path))
     output_dir_path = os.path.dirname(args.output_file_path)
@@ -28,11 +31,21 @@ def test(args: argparse.Namespace):
     style_image = load_image(args.style_image_file_path, device)
     print('loaded style image: {}'.format(style_image.shape))
 
-    encoder_decoder_net = EncoderDecoderNet()
-    encoder_decoder_net.load_state_dict(torch.load(args.model_file_path))
+    print('using encoder_model_file_path: {}'.format(args.encoder_model_file_path))
+    encoder = Encoder()
+    encoder.features.load_state_dict(torch.load(args.encoder_model_file_path))
+    print('loaded encoder network')
+
+    print('using decoder_model_file_path: {}'.format(args.encoder_model_file_path))
+    decoder = Decoder()
+    decoder.load_state_dict(torch.load(args.decoder_model_file_path))
+    print('loaded decoder network')
+
+    encoder_num_layers = 30
+    encoder_decoder_net = EncoderDecoderNet(encoder, encoder_num_layers, decoder)
     encoder_decoder_net.to(device)
     encoder_decoder_net.eval()
-    print('prepared network')
+    print('prepared encoder-decoder network')
 
     output_tensor, _ = encoder_decoder_net(content_image, style_image)
     print('calculated output: {}'.format(output_tensor.shape))
@@ -49,7 +62,8 @@ def main():
     parser.add_argument('--content-image-file-path', type=str, required=True)
     parser.add_argument('--style-image-file-path', type=str, required=True)
     parser.add_argument('--output-file-path', type=str, required=True)
-    parser.add_argument('--model-file-path', type=str, required=True)
+    parser.add_argument('--encoder-model-file-path', type=str, required=True)
+    parser.add_argument('--decoder-model-file-path', type=str, required=True)
 
     args = parser.parse_args()
 
