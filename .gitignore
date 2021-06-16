@@ -13,7 +13,7 @@ __pycache__
 .idea/**/misc.xml
 
 # specific project folders
-data/models
-data/configs
-data/images
-data/output
+data/checkpoints/**
+data/models/**
+data/configs/**
+data/images/**

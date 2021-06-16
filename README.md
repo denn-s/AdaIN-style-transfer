@@ -47,11 +47,24 @@ python -m tools.train \
 
 ## Test
 
+_arbitrary image pair_
+
 ```bash
 python -m tools.test \
---content-image-file-path  data/images/content/cica.jpg \
---style-image-file-path  data/images/style/great_wave.jpg \
---output-file-path data/output/cat_great_wave.jpg \
+--content-image-file-path  data/images/content/chicago_cropped.jpg \
+--style-image-file-path  data/images/style/ashville_cropped.jpg \
+--output-image-file-path data/images/output/chicago_style_ashville.jpg \
+--encoder-model-file-path data/models/vgg19.pt \
+--decoder-model-file-path data/checkpoints/train_2021.06.12_19-14-41/epoch_15_decoder.pt
+```
+
+_image pairs like those used by the paper authors_
+
+```bash
+python -m tools.test_all \
+--content-image-dir-path  data/images/content \
+--style-image-dir-path  data/images/style \
+--output-image-dir-path data/images/output \
 --encoder-model-file-path data/models/vgg19.pt \
 --decoder-model-file-path data/checkpoints/train_2021.06.12_19-14-41/epoch_15_decoder.pt
 ```
