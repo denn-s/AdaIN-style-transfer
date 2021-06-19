@@ -19,6 +19,8 @@ from lib.models.encoder_decoder_net import EncoderDecoderNet
 from lib.datasets.image_dataset import ImageDataset
 from lib.adain import AdaIN
 
+from lib.utils import setup_logger
+
 
 def calc_content_loss(content_target, output_image):
     content_loss = torch.nn.MSELoss()
@@ -73,18 +75,22 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
 
     writer = SummaryWriter(log_dir=checkpoint_dir_path)
 
+    log_file_name = 'log.txt'
+    log_file_path = os.path.join(checkpoint_dir_path, log_file_name)
+    logger = setup_logger('train', log_file_path)
+
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    print('using device: {}'.format(device))
+    logger.info('using device: {}'.format(device))
 
-    print('using content_images_dir_path: {}'.format(content_images_dir_path))
+    logger.info('using content_images_dir_path: {}'.format(content_images_dir_path))
     if not os.path.isdir(content_images_dir_path):
-        print('error: not a directroy: {}'.format(content_images_dir_path))
+        logger.info('error: not a directroy: {}'.format(content_images_dir_path))
 
-    print('using style_images_dir_path: {}'.format(style_images_dir_path))
+    logger.info('using style_images_dir_path: {}'.format(style_images_dir_path))
     if not os.path.isdir(style_images_dir_path):
-        print('error: not a directroy: {}'.format(style_images_dir_path))
+        logger.info('error: not a directroy: {}'.format(style_images_dir_path))
 
-    print('using encoder_model_file_path: {}'.format(encoder_model_file_path))
+    logger.info('using encoder_model_file_path: {}'.format(encoder_model_file_path))
     encoder = Encoder()
     encoder.features.load_state_dict(torch.load(encoder_model_file_path))
 
@@ -97,7 +103,7 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
 
     model.to(device)
     model.train()
-    print('prepared network')
+    logger.info('prepared network')
 
     transforms = T.Compose([
         T.Resize(512),
@@ -108,19 +114,19 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
     content_loader = DataLoader(ImageDataset(content_images_dir_path, transform=transforms),
                                 batch_size=batch_size,
                                 shuffle=True, num_workers=num_workers)
-    print('content_loader len: {}'.format(len(content_loader)))
+    logger.info('content_loader len: {}'.format(len(content_loader)))
 
     style_loader = DataLoader(ImageDataset(style_images_dir_path, transform=transforms),
                               batch_size=batch_size,
                               shuffle=True, num_workers=num_workers)
-    print('style_loader len: {}'.format(len(style_loader)))
+    logger.info('style_loader len: {}'.format(len(style_loader)))
 
     optimizer = torch.optim.Adam(model.decoder.parameters(), lr=learning_rate)
 
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, lr_scheduler_gamma)
 
     max_iterations = int(min([len(content_loader), len(style_loader)]))
-    print('using max_iterations: {}'.format(max_iterations))
+    logger.info('using max_iterations: {}'.format(max_iterations))
 
     encoder_activations = {}
 
@@ -159,7 +165,7 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
                 content_batch = next(content_iter).to(device)
                 style_batch = next(style_iter).to(device)
             except Exception as e:
-                print('exception occurred: {}'.format(repr(e)))
+                logger.erro('exception occurred: {}'.format(repr(e)))
                 continue
 
             output_image, target_fm = model(content_batch, style_batch)
@@ -181,7 +187,7 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
             loss = content_loss + style_loss
 
             if i % log_n_iter == 0:
-                print(
+                logger.info(
                     print_str.format(epoch + 1, num_epochs, i + 1, max_iterations, content_loss, style_loss, loss))
 
                 global_step = (epoch * max_iterations) + i
@@ -212,7 +218,8 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
     writer.close()
 
 
-def main():
+def parse_args():
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--content-images-dir-path', type=str, required=True)
@@ -231,6 +238,13 @@ def main():
     parser.add_argument('--save-n-epochs', type=int, default=1)
 
     args = parser.parse_args()
+
+    return args
+
+
+def main():
+
+    args = parse_args()
 
     # set random seed for reproducibility
     manual_seed = 42

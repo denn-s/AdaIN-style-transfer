@@ -32,16 +32,16 @@ _new training process_
 
 ```bash
 python -m tools.train \
---content-images-dir-path data/datasets/coco/train2017 \
---style-images-dir-path data/datasets/wiki_art/train \
+--content-images-dir-path /Data/coco/train2017 \
+--style-images-dir-path /Data/wiki_art/train \
 --output-dir-path data/checkpoints \
---encoder-model-file_path data/models/vgg19.pt \
---style-weight 10 \
+--encoder-model-file-path data/models/vgg19.pt \
+--style-weight 8 \
 --batch-size 8 \
 --num-workers 4 \
 --num-epochs 16 \
 --learning-rate 0.0001 \
---lr-scheduler-gamma 0.1 \
+--lr-scheduler-gamma 0.9 \
 --log-n-iter 100 \
 --image-n-iter 500 \
 --save-n-epochs 1
@@ -51,17 +51,17 @@ _training process with pretrained decoder_
 
 ```bash
 python -m tools.train \
---content-images-dir-path data/datasets/coco/train2017 \
---style-images-dir-path data/datasets/wiki_art/train \
+--content-images-dir-path /Data/coco/train2017 \
+--style-images-dir-path /Data/wiki_art/train \
 --output-dir-path data/checkpoints \
 --encoder-model-file-path data/models/vgg19.pt \
 --decoder-model-file-path data/checkpoints/train_2021.06.12_19-14-41/epoch_15_decoder.pt \
---style-weight 10 \
+--style-weight 8 \
 --batch-size 8 \
 --num-workers 4 \
 --num-epochs 16 \
 --learning-rate 0.0001 \
---lr-scheduler-gamma 0.1 \
+--lr-scheduler-gamma 0.9 \
 --log-n-iter 100 \
 --image-n-iter 500 \
 --save-n-epochs 1
