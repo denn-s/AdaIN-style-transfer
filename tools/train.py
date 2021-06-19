@@ -165,7 +165,7 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
                 content_batch = next(content_iter).to(device)
                 style_batch = next(style_iter).to(device)
             except Exception as e:
-                logger.erro('exception occurred: {}'.format(repr(e)))
+                logger.error('exception occurred: {}'.format(repr(e)))
                 continue
 
             output_image, target_fm = model(content_batch, style_batch)
