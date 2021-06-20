@@ -3,3 +3,4 @@ torch
 torchvision
 tensorboard
 tqdm
+pyyaml

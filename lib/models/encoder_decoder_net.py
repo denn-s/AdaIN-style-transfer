@@ -13,19 +13,16 @@ class EncoderDecoderNet(nn.Module):
         self.encoder = nn.Sequential(
             *list(encoder_model.features.children())[:encoder_num_layers + 1]
         )
-        print(self.encoder)
 
         # freeze encoder weights
         for parameter in self.encoder.parameters():
             parameter.requires_grad = False
 
         self.decoder = decoder_model
-        print(self.decoder)
 
         # unfreeze encoder weights
         for parameter in self.decoder.parameters():
             parameter.requires_grad = True
-        print(self.decoder)
 
         self.adain = AdaIN()
 

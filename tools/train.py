@@ -1,4 +1,5 @@
 from typing import Dict
+from types import SimpleNamespace
 
 import os
 import argparse
@@ -9,9 +10,10 @@ import datetime
 
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import torchvision.transforms as T
-from torch.utils.tensorboard import SummaryWriter
+from torchvision.utils import make_grid
 
 from lib.models.encoder import Encoder
 from lib.models.decoder import Decoder
@@ -19,7 +21,7 @@ from lib.models.encoder_decoder_net import EncoderDecoderNet
 from lib.datasets.image_dataset import ImageDataset
 from lib.adain import AdaIN
 
-from lib.utils import setup_logger
+from lib.utils import setup_logger, save_config
 
 
 def calc_content_loss(content_target, output_image):
@@ -59,47 +61,36 @@ def calc_style_loss(style_target, style_output):
     return sum_mean + sum_std
 
 
-def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_path: str, encoder_model_file_path: str,
-          decoder_model_file_path: str, batch_size: int, num_workers: int, num_epochs: int,
-          learning_rate: float, lr_scheduler_gamma: float, style_weight: float, log_n_iter: int, image_n_iter: int,
-          save_n_epochs: int):
-    print('using output_dir_path: {}'.format(output_dir_path))
-    if not os.path.exists(output_dir_path):
-        os.makedirs(output_dir_path)
+def train(config: SimpleNamespace):
+    setup_checkpoint(config)
+    logger = setup_logging(config)
+    setup_config(config)
 
-    dt_str = datetime.datetime.now().strftime("%Y.%m.%d_%H-%M-%S")
-    checkpoint_dir_path = os.path.join(output_dir_path, 'train_' + dt_str)
-    print('using checkpoint_dir_path: {}'.format(checkpoint_dir_path))
-    if not os.path.exists(checkpoint_dir_path):
-        os.makedirs(checkpoint_dir_path)
+    logger.info('using config: {}'.format(vars(config)))
 
-    writer = SummaryWriter(log_dir=checkpoint_dir_path)
-
-    log_file_name = 'log.txt'
-    log_file_path = os.path.join(checkpoint_dir_path, log_file_name)
-    logger = setup_logger('train', log_file_path)
+    writer = SummaryWriter(log_dir=config.checkpoint_dir_path)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     logger.info('using device: {}'.format(device))
 
-    logger.info('using content_images_dir_path: {}'.format(content_images_dir_path))
-    if not os.path.isdir(content_images_dir_path):
-        logger.info('error: not a directroy: {}'.format(content_images_dir_path))
+    if not os.path.isdir(config.content_images_dir_path):
+        logger.info('error: not a directroy: {}'.format(config.content_images_dir_path))
 
-    logger.info('using style_images_dir_path: {}'.format(style_images_dir_path))
-    if not os.path.isdir(style_images_dir_path):
-        logger.info('error: not a directroy: {}'.format(style_images_dir_path))
+    if not os.path.isdir(config.style_images_dir_path):
+        logger.info('error: not a directroy: {}'.format(config.style_images_dir_path))
 
-    logger.info('using encoder_model_file_path: {}'.format(encoder_model_file_path))
     encoder = Encoder()
-    encoder.features.load_state_dict(torch.load(encoder_model_file_path))
+    encoder.features.load_state_dict(torch.load(config.encoder_model_file_path))
 
     decoder = Decoder()
-    if decoder_model_file_path is not None:
-        decoder.load_state_dict(torch.load(decoder_model_file_path))
+    if config.decoder_model_file_path is not None:
+        decoder.load_state_dict(torch.load(config.decoder_model_file_path))
 
     encoder_num_layers = 30
     model = EncoderDecoderNet(encoder, encoder_num_layers, decoder)
+
+    logger.info('encoder: \n{}'.format(model.encoder))
+    logger.info('decoder: \n{}'.format(model.decoder))
 
     model.to(device)
     model.train()
@@ -111,19 +102,19 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
         T.ToTensor()
     ])
 
-    content_loader = DataLoader(ImageDataset(content_images_dir_path, transform=transforms),
-                                batch_size=batch_size,
-                                shuffle=True, num_workers=num_workers)
+    content_loader = DataLoader(ImageDataset(config.content_images_dir_path, transform=transforms),
+                                batch_size=config.batch_size,
+                                shuffle=True, num_workers=config.num_workers)
     logger.info('content_loader len: {}'.format(len(content_loader)))
 
-    style_loader = DataLoader(ImageDataset(style_images_dir_path, transform=transforms),
-                              batch_size=batch_size,
-                              shuffle=True, num_workers=num_workers)
+    style_loader = DataLoader(ImageDataset(config.style_images_dir_path, transform=transforms),
+                              batch_size=config.batch_size,
+                              shuffle=True, num_workers=config.num_workers)
     logger.info('style_loader len: {}'.format(len(style_loader)))
 
-    optimizer = torch.optim.Adam(model.decoder.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.decoder.parameters(), lr=config.learning_rate)
 
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, lr_scheduler_gamma)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, config.lr_scheduler_gamma)
 
     max_iterations = int(min([len(content_loader), len(style_loader)]))
     logger.info('using max_iterations: {}'.format(max_iterations))
@@ -143,7 +134,7 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
     for layer_pos in enc_style_layers:
         model.encoder[layer_pos].register_forward_hook(get_activation(layer_pos))
 
-    digits_epoch = int(math.log10(num_epochs)) + 1
+    digits_epoch = int(math.log10(config.num_epochs)) + 1
     digits_iter = int(math.log10(max_iterations)) + 1
     print_str = 'epoch: [{:>' + str(digits_epoch) + '}|{}], iter: [{:>' + str(
         digits_iter) + '}|{}] -> content loss: {:>10.5f}, style loss: {:>10.5f}, total loss: {:>10.5f}'
@@ -154,7 +145,7 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
 
     encoder_activations = {}
 
-    for epoch in range(num_epochs):
+    for epoch in range(config.num_epochs):
 
         content_iter = iter(content_loader)
         style_iter = iter(style_loader)
@@ -183,12 +174,12 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
             encoder_activations = {}
 
             content_loss = calc_content_loss(target_fm, output_fm)
-            style_loss = style_weight * calc_style_loss(target_activations, output_activations)
+            style_loss = config.style_weight * calc_style_loss(target_activations, output_activations)
             loss = content_loss + style_loss
 
-            if i % log_n_iter == 0:
+            if i % config.log_n_iter == 0:
                 logger.info(
-                    print_str.format(epoch + 1, num_epochs, i + 1, max_iterations, content_loss, style_loss, loss))
+                    print_str.format(epoch, config.num_epochs, i, max_iterations, content_loss, style_loss, loss))
 
                 global_step = (epoch * max_iterations) + i
 
@@ -200,9 +191,8 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
                 for name, weight in model.decoder.named_parameters():
                     writer.add_histogram(name, weight, global_step)
 
-            if i % image_n_iter == 0:
-                images_grid = torchvision.utils.make_grid(torch.cat((content_batch, style_batch, output_image), 0),
-                                                          batch_size)
+            if i % config.image_n_iter == 0:
+                images_grid = make_grid(torch.cat((content_batch, style_batch, output_image), 0), config.batch_size)
                 writer.add_image('images', images_grid, global_step)
 
             optimizer.zero_grad()
@@ -211,15 +201,45 @@ def train(content_images_dir_path: str, style_images_dir_path: str, output_dir_p
 
         scheduler.step()
 
-        if epoch % save_n_epochs == 0 or epoch == num_epochs - 1:
-            model_file_path = os.path.join(checkpoint_dir_path, 'epoch_' + str(epoch) + '_decoder.pt')
+        if epoch % config.save_n_epochs == 0 or epoch == config.num_epochs - 1:
+            model_file_path = os.path.join(config.checkpoint_dir_path, 'epoch_' + str(epoch) + '_decoder.pt')
             torch.save(model.decoder.state_dict(), model_file_path)
+            logger.info('saved model to: {}'.format(model_file_path))
 
     writer.close()
 
 
-def parse_args():
+def setup_checkpoint(config: SimpleNamespace):
+    if not os.path.exists(config.output_dir_path):
+        os.makedirs(config.output_dir_path)
 
+    dt_str = datetime.datetime.now().strftime("%Y.%m.%d_%H-%M-%S")
+    checkpoint_dir_path = os.path.join(config.output_dir_path, 'train_' + dt_str)
+    if not os.path.exists(checkpoint_dir_path):
+        os.makedirs(checkpoint_dir_path)
+
+    config.checkpoint_dir_path = checkpoint_dir_path
+
+
+def setup_logging(config: SimpleNamespace):
+    log_file_name = 'log.txt'
+    log_file_path = os.path.join(config.checkpoint_dir_path, log_file_name)
+    logger = setup_logger('train', log_file_path)
+
+    config.log_file_path = log_file_path
+
+    return logger
+
+
+def setup_config(config: SimpleNamespace):
+    config_file_name = 'config.yaml'
+    config_file_path = os.path.join(config.checkpoint_dir_path, config_file_name)
+
+    config.config_file_path = config_file_path
+    save_config(config, config.config_file_path)
+
+
+def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--content-images-dir-path', type=str, required=True)
@@ -243,20 +263,15 @@ def parse_args():
 
 
 def main():
-
     args = parse_args()
+    config = SimpleNamespace(**vars(args))
 
     # set random seed for reproducibility
     manual_seed = 42
-
-    print('random seed: ', manual_seed)
     random.seed(manual_seed)
     torch.manual_seed(manual_seed)
 
-    train(args.content_images_dir_path, args.style_images_dir_path, args.output_dir_path, args.encoder_model_file_path,
-          args.decoder_model_file_path, args.batch_size, args.num_workers, args.num_epochs,
-          args.learning_rate, args.lr_scheduler_gamma,
-          args.style_weight, args.log_n_iter, args.image_n_iter, args.save_n_epochs)
+    train(config)
 
 
 if __name__ == '__main__':
