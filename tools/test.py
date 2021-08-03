@@ -48,7 +48,7 @@ def test(content_image_file_path: str, style_image_file_path: str, output_image_
     output_tensor, _ = encoder_decoder_net(content_image, style_image)
     print('calculated output: {}'.format(output_tensor.shape))
 
-    output_data = output_tensor.cpu()[0]
+    output_data = output_tensor.clip(0, 1).cpu()[0]
     output_image = T.ToPILImage()(output_data)
 
     output_image.save(output_image_file_path)

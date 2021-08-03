@@ -192,6 +192,9 @@ def train(config: SimpleNamespace):
                     writer.add_histogram(name, weight, global_step)
 
             if i % config.image_n_iter == 0:
+
+                output_image = output_image.clip(0, 1)
+
                 images_grid = make_grid(torch.cat((content_batch, style_batch, output_image), 0), config.batch_size)
                 writer.add_image('images', images_grid, global_step)
 

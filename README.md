@@ -32,18 +32,18 @@ _new training process_
 
 ```bash
 python -m tools.train \
---content-images-dir-path /Data/coco/train2017 \
---style-images-dir-path /Data/wiki_art/train \
+--content-images-dir-path ~/Data/coco/train2017 \
+--style-images-dir-path ~/Data/wiki_art/train \
 --output-dir-path data/checkpoints \
 --encoder-model-file-path data/models/vgg19.pt \
---style-weight 8 \
---batch-size 8 \
+--style-weight 1e2 \
+--batch-size 4 \
 --num-workers 4 \
 --num-epochs 16 \
---learning-rate 0.0001 \
+--learning-rate 1e-4 \
 --lr-scheduler-gamma 0.9 \
 --log-n-iter 100 \
---image-n-iter 500 \
+--image-n-iter 1000 \
 --save-n-epochs 1
 ```
 
@@ -51,19 +51,19 @@ _training process with pretrained decoder_
 
 ```bash
 python -m tools.train \
---content-images-dir-path /Data/coco/train2017 \
---style-images-dir-path /Data/wiki_art/train \
+--content-images-dir-path ~/Data/coco/train2017 \
+--style-images-dir-path ~/Data/wiki_art/train \
 --output-dir-path data/checkpoints \
 --encoder-model-file-path data/models/vgg19.pt \
 --decoder-model-file-path data/checkpoints/train_2021.06.12_19-14-41/epoch_15_decoder.pt \
---style-weight 8 \
---batch-size 8 \
+--style-weight 1e2 \
+--batch-size 4 \
 --num-workers 4 \
 --num-epochs 16 \
---learning-rate 0.0001 \
+--learning-rate 1e-4 \
 --lr-scheduler-gamma 0.9 \
 --log-n-iter 100 \
---image-n-iter 500 \
+--image-n-iter 1000 \
 --save-n-epochs 1
 ```
 
@@ -77,7 +77,7 @@ python -m tools.test \
 --style-image-file-path  data/images/style/ashville_cropped.jpg \
 --output-image-file-path data/images/output/chicago_style_ashville.jpg \
 --encoder-model-file-path data/models/vgg19.pt \
---decoder-model-file-path data/checkpoints/train_2021.06.12_19-14-41/epoch_15_decoder.pt
+--decoder-model-file-path data/checkpoints/train_2021.06.12_19-14-41/epoch_23_decoder.pt
 ```
 
 _image pairs like those used by the paper authors_
@@ -88,7 +88,7 @@ python -m tools.test_all \
 --style-image-dir-path  data/images/style \
 --output-image-dir-path data/images/output \
 --encoder-model-file-path data/models/vgg19.pt \
---decoder-model-file-path data/checkpoints/train_2021.06.12_19-14-41/epoch_15_decoder.pt
+--decoder-model-file-path data/checkpoints/train_2021.06.20_06-19-14/epoch_23_decoder.pt
 ```
 
 ## References

@@ -9,6 +9,7 @@ class Encoder(nn.Module):
 
         # modified VGG19 architecture
         self.features = nn.Sequential(
+
             nn.Conv2d(3, 3, kernel_size=1),
             nn.ReflectionPad2d(1),
             nn.Conv2d(3, 64, kernel_size=3),
@@ -17,6 +18,7 @@ class Encoder(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3),
             nn.ReLU(),
             nn.MaxPool2d((2, 2), ceil_mode=True),
+
             nn.ReflectionPad2d(1),
             nn.Conv2d(64, 128, kernel_size=3),
             nn.ReLU(),  # relu2_1
@@ -24,6 +26,7 @@ class Encoder(nn.Module):
             nn.Conv2d(128, 128, kernel_size=3),
             nn.ReLU(),
             nn.MaxPool2d((2, 2), ceil_mode=True),
+
             nn.ReflectionPad2d(1),
             nn.Conv2d(128, 256, kernel_size=3),
             nn.ReLU(),  # relu3_1
@@ -37,6 +40,7 @@ class Encoder(nn.Module):
             nn.Conv2d(256, 256, kernel_size=3),
             nn.ReLU(),
             nn.MaxPool2d((2, 2), ceil_mode=True),
+
             nn.ReflectionPad2d(1),
             nn.Conv2d(256, 512, kernel_size=3),
             nn.ReLU(),  # relu4_1
@@ -50,6 +54,7 @@ class Encoder(nn.Module):
             nn.Conv2d(512, 512, kernel_size=3),
             nn.ReLU(),
             nn.MaxPool2d((2, 2), ceil_mode=True),
+
             nn.ReflectionPad2d(1),
             nn.Conv2d(512, 512, kernel_size=3),
             nn.ReLU(),
