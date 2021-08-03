@@ -8,6 +8,10 @@ from tools.test import test
 
 def test_all(content_image_dir_path: str, style_image_dir_path: str, output_image_dir_path: str,
              encoder_model_file_path: str, decoder_model_file_path: str):
+
+    if not os.path.exists(output_image_dir_path):
+        os.makedirs(output_image_dir_path)
+
     # content and style image pairs as used by the paper authors
     content_style_pairs = [
         ['avril_cropped.jpg', 'impronte_d_artista_cropped.jpg'],

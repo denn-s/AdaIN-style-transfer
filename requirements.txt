@@ -1,6 +1,8 @@
 Pillow
+
 torch
 torchvision
 tensorboard
+
 tqdm
 pyyaml
