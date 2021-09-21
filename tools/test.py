@@ -31,12 +31,12 @@ def test(content_image_file_path: str, style_image_file_path: str, output_image_
 
     print('using encoder_model_file_path: {}'.format(encoder_model_file_path))
     encoder = Encoder()
-    encoder.features.load_state_dict(torch.load(encoder_model_file_path))
+    encoder.features.load_state_dict(torch.load(encoder_model_file_path, map_location=device))
     print('loaded encoder network')
 
     print('using decoder_model_file_path: {}'.format(encoder_model_file_path))
     decoder = Decoder()
-    decoder.load_state_dict(torch.load(decoder_model_file_path))
+    decoder.load_state_dict(torch.load(decoder_model_file_path, map_location=device))
     print('loaded decoder network')
 
     encoder_num_layers = 30
