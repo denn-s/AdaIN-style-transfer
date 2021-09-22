@@ -20,8 +20,8 @@ from lib.models.decoder import Decoder
 from lib.models.encoder_decoder_net import EncoderDecoderNet
 from lib.datasets.image_dataset import ImageDataset
 from lib.adain import AdaIN
-
 from lib.utils import setup_logger, save_config
+
 
 
 def calc_content_loss(content_target, output_image):
@@ -38,25 +38,25 @@ def calc_style_loss(style_target, style_output):
     style_targets = list(style_target.values())
     style_outputs = list(style_output.values())
 
-    mean_style_act, std_style_act = AdaIN.calc_mean_std(style_targets[0])
+    mean_target_act, std_target_act = AdaIN.calc_mean_std(style_targets[0])
     mean_output_act, std_output_act = AdaIN.calc_mean_std(style_outputs[0])
 
-    sum_mean = style_loss(mean_style_act, mean_output_act)
-    sum_std = style_loss(std_style_act, std_output_act)
+    sum_mean = style_loss(mean_output_act, mean_target_act)
+    sum_std = style_loss(std_output_act, std_target_act)
 
-    for style_act, output_act in zip(style_targets[1:], style_outputs[1:]):
+    for target_act, output_act in zip(style_targets[1:], style_outputs[1:]):
         # print('style_target: {}'.format(style_act.shape))
         # print('style_output: {}'.format(output_act.shape))
 
-        mean_style_act, std_style_act = AdaIN.calc_mean_std(style_act)
+        mean_target_act, std_target_act = AdaIN.calc_mean_std(target_act)
         mean_output_act, std_output_act = AdaIN.calc_mean_std(output_act)
         # print('mean_style_act: {}'.format(mean_style_act.shape))
         # print('mean_output_act: {}'.format(mean_output_act.shape))
         # print('std_style_act: {}'.format(std_style_act.shape))
         # print('std_output_act: {}'.format(std_output_act.shape))
 
-        sum_mean += style_loss(mean_style_act, mean_output_act)
-        sum_std += style_loss(std_style_act, std_output_act)
+        sum_mean += style_loss(mean_output_act, mean_target_act)
+        sum_std += style_loss(std_output_act, std_target_act)
 
     return sum_mean + sum_std
 

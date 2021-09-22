@@ -2,8 +2,11 @@ from typing import Dict, Any
 import logging
 
 import yaml
-from PIL import Image
+from PIL import Image, ImageFile
 import torchvision.transforms as T
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+Image.MAX_IMAGE_PIXELS = None
 
 
 def load_image(image_file_path: str, device=None):
