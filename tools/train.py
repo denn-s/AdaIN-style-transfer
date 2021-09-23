@@ -23,7 +23,6 @@ from lib.adain import AdaIN
 from lib.utils import setup_logger, save_config
 
 
-
 def calc_content_loss(content_target, output_image):
     content_loss = torch.nn.MSELoss()
     return content_loss(output_image, content_target)
@@ -192,7 +191,6 @@ def train(config: SimpleNamespace):
                     writer.add_histogram(name, weight, global_step)
 
             if i % config.image_n_iter == 0:
-
                 output_image = output_image.clip(0, 1)
 
                 images_grid = make_grid(torch.cat((content_batch, style_batch, output_image), 0), config.batch_size)
@@ -253,11 +251,11 @@ def parse_args():
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--num-workers', type=int, default=2)
     parser.add_argument('--num-epochs', type=int, default=10)
-    parser.add_argument('--learning-rate', type=float, default=0.0001)
-    parser.add_argument('--lr-scheduler-gamma', type=float, default=0.1)
-    parser.add_argument('--style-weight', type=float, default=10.0)
+    parser.add_argument('--learning-rate', type=float, default=1e-4)
+    parser.add_argument('--lr-scheduler-gamma', type=float, default=0.9)
+    parser.add_argument('--style-weight', type=float, default=1.0)
     parser.add_argument('--log-n-iter', type=int, default=100)
-    parser.add_argument('--image-n-iter', type=int, default=500)
+    parser.add_argument('--image-n-iter', type=int, default=1000)
     parser.add_argument('--save-n-epochs', type=int, default=1)
 
     args = parser.parse_args()
